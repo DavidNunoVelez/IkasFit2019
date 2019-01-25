@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">IkasFit19</string>
+    <string name="mensajeSumarPasos">¿Estás seguro de querer sumar esos pasos?</string>
+    <string name="mensakeOK">OK</string>
+    <string name="mensakeNO">NO</string>
 
 </resources>

@@ -1,10 +1,13 @@
 package org.morfe.ikasfit19.Ventanas;
 
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -41,23 +44,29 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import org.morfe.ikasfit19.BaseDatos.BaseDatos;
+import org.morfe.ikasfit19.Clases.Dialogo;
 import org.morfe.ikasfit19.Clases.Usuario;
 import org.morfe.ikasfit19.R;
 
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static android.content.ContentValues.TAG;
 
 
-
 public class Principal extends AppCompatActivity implements OnDataPointListener,
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
-
+        GoogleApiClient.OnConnectionFailedListener, View.OnClickListener {
+    public static boolean guardarPasos;
     private FirebaseAuth mAuth;
     private static final int REQUEST_OAUTH = 1;
     private static final String AUTH_PENDING = "auth_state_pending";
@@ -68,21 +77,28 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
     private static TextView textoMostrar;
     private static TextView textoRanking;
     private FirebaseFirestore baseDatos = FirebaseFirestore.getInstance();
+    private Usuario usu;
+    private List<Usuario> usuarios = new ArrayList<>();
+    private int numeroTotalParticipantes=0;
+    private String idCliente="";
+    private String ranking="";
     @Override
     protected void onStart() {
         super.onStart();
         mApiClient.connect();
-        FirebaseUser currentUser=mAuth.getCurrentUser();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
 
     }
 
     @Override
-    protected void onCreate( Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_principal);
         mAuth = FirebaseAuth.getInstance();
         botonRanking = (Button) findViewById(R.id.botonRanking);
+        botonRanking.setOnClickListener(this);
         botonGuardar = (Button) findViewById(R.id.botonGuardarPasos);
+        botonGuardar.setOnClickListener(this);
         textoMostrar = (TextView) findViewById(R.id.textoMostrar);
         textoRanking = (TextView) findViewById(R.id.textoRanking);
 
@@ -98,6 +114,7 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
                 .addOnConnectionFailedListener(this)
                 .build();
         //GoogleFit
+
         //Firestore anónimo
         mAuth.signInAnonymously()
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
@@ -121,24 +138,88 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
                 });
         //Firestore anónimo
 
+        buscarUsuario();
+    }
 
+    public void procesarBoton(int opc){
+        switch (opc){
+            case R.id.botonGuardarPasos:
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                Dialogo dialogo = new Dialogo();
+                dialogo.show(fragmentManager, "Alerta");
+                if(guardarPasos){
+                    int pasosAlmacenados = usu.getPasosTotales();
+                    int pasosTotales = pasosAlmacenados + 500;
+                    BaseDatos bada = new BaseDatos();
+                    bada.guardarPasos(mAuth, pasosTotales);
+                    buscarUsuario();
+                    String pasosActuales = String.valueOf(usu.getPasosTotales());
+                    Toast.makeText(getApplicationContext(), "Pasos almacenados" , Toast.LENGTH_SHORT).show();
+                    textoMostrar.setText(pasosActuales);
+                }else{
+                    Toast.makeText(getApplicationContext(), "Pasos No almacenados" , Toast.LENGTH_SHORT).show();
+                }
 
+                break;
+            case R.id.botonRanking:
+                idCliente = mAuth.getUid();
+                baseDatos.collection("usuarios")
+                        .orderBy("pasosTotales", Query.Direction.DESCENDING)
+                        .get()
+                        .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                            @Override
+                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                if (task.isSuccessful()) {
+                                    numeroTotalParticipantes = task.getResult().size();
+                                    for (QueryDocumentSnapshot document : task.getResult()) {
+                                        Usuario usu = document.toObject(Usuario.class);
+                                        usuarios.add(usu);
+
+                                    }
+                                    int posicion=0;
+                                    for (Usuario usuario:usuarios) {
+                                        if(usuario.getId().equalsIgnoreCase(idCliente)){
+                                            String numeroTotal=String.valueOf(numeroTotalParticipantes);
+                                            ranking = String.valueOf(posicion)+" / "+numeroTotal;
+                                            textoRanking.setText(ranking);
+                                        }
+                                        posicion++;
+                                    }
+                                } else {
+                                    Log.d(TAG, "Error getting documents: ", task.getException());
+                                }
+                            }
+                        });
+                break;
+        }
+    }
+
+    public Usuario buscarUsuario() {
+        DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
+        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                usu = documentSnapshot.toObject(Usuario.class);
+
+            }
+        });
+        return usu;
     }
 
     private void registerFitnessDataListener(DataSource dataSource, DataType dataType) {
 
         SensorRequest request = new SensorRequest.Builder()
-                .setDataSource( dataSource )
+                .setDataSource(dataSource)
                 .setDataType(dataType)
-                .setSamplingRate( 3, TimeUnit.SECONDS )
+                .setSamplingRate(3, TimeUnit.SECONDS)
                 .build();
 
-        Fitness.SensorsApi.add( mApiClient, request, this )
+        Fitness.SensorsApi.add(mApiClient, request, this)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status status) {
                         if (status.isSuccess()) {
-                            Log.e( "GoogleFit", "SensorApi successfully added" );
+                            Log.e("GoogleFit", "SensorApi successfully added");
                         }
                     }
                 });
@@ -148,15 +229,15 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
     public void onConnected(Bundle bundle) {
 
         DataSourcesRequest dataSourceRequest = new DataSourcesRequest.Builder()
-                .setDataTypes( DataType.TYPE_STEP_COUNT_CUMULATIVE )
-                .setDataSourceTypes( DataSource.TYPE_RAW )
+                .setDataTypes(DataType.TYPE_STEP_COUNT_CUMULATIVE)
+                .setDataSourceTypes(DataSource.TYPE_RAW)
                 .build();
 
         ResultCallback<DataSourcesResult> dataSourcesResultCallback = new ResultCallback<DataSourcesResult>() {
             @Override
             public void onResult(DataSourcesResult dataSourcesResult) {
-                for( DataSource dataSource : dataSourcesResult.getDataSources() ) {
-                    if( DataType.TYPE_STEP_COUNT_CUMULATIVE.equals( dataSource.getDataType() ) ) {
+                for (DataSource dataSource : dataSourcesResult.getDataSources()) {
+                    if (DataType.TYPE_STEP_COUNT_CUMULATIVE.equals(dataSource.getDataType())) {
                         registerFitnessDataListener(dataSource, DataType.TYPE_STEP_COUNT_CUMULATIVE);
                     }
                 }
@@ -174,29 +255,29 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.d("GoogleFit","Error de conexión");
-        if( !authInProgress ) {
+        Log.d("GoogleFit", "Error de conexión");
+        if (!authInProgress) {
             try {
                 authInProgress = true;
-                connectionResult.startResolutionForResult( Principal.this, REQUEST_OAUTH );
-            } catch(IntentSender.SendIntentException e ) {
+                connectionResult.startResolutionForResult(Principal.this, REQUEST_OAUTH);
+            } catch (IntentSender.SendIntentException e) {
 
             }
         } else {
-            Log.e( "GoogleFit", "authInProgress" );
+            Log.e("GoogleFit", "authInProgress");
         }
     }
 
 
     @Override
     public void onDataPoint(DataPoint dataPoint) {
-        for( final Field field : dataPoint.getDataType().getFields() ) {
-            final Value value = dataPoint.getValue( field );
+        for (final Field field : dataPoint.getDataType().getFields()) {
+            final Value value = dataPoint.getValue(field);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     //Toast.makeText(getApplicationContext(), "Field: " + field.getName() + " Value: " + value, Toast.LENGTH_SHORT).show();
-                    textoMostrar.setText(value.toString());
+                    //textoMostrar.setText(value.toString());
 
 
                 }
@@ -206,14 +287,14 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if( requestCode == REQUEST_OAUTH ) {
+        if (requestCode == REQUEST_OAUTH) {
             authInProgress = false;
-            if( resultCode == RESULT_OK ) {
-                if( !mApiClient.isConnecting() && !mApiClient.isConnected() ) {
+            if (resultCode == RESULT_OK) {
+                if (!mApiClient.isConnecting() && !mApiClient.isConnected()) {
                     mApiClient.connect();
                 }
-            } else if( resultCode == RESULT_CANCELED ) {
-                Log.e( "GoogleFit", "RESULT_CANCELED" );
+            } else if (resultCode == RESULT_CANCELED) {
+                Log.e("GoogleFit", "RESULT_CANCELED");
             }
         } else {
             Log.e("GoogleFit", "requestCode NOT request_oauth");
@@ -225,7 +306,7 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
     protected void onStop() {
         super.onStop();
 
-        Fitness.SensorsApi.remove( mApiClient, this )
+        Fitness.SensorsApi.remove(mApiClient, this)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status status) {
@@ -235,25 +316,19 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
                     }
                 });
     }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(AUTH_PENDING, authInProgress);
     }
 
-    public boolean mostrarRanking(View v){
 
-        return true;
+    @Override
+    public void onClick(View view) {
+        procesarBoton(view.getId());
+
     }
-    public boolean guardarPasos(View v){
-        DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
-        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-            @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                Usuario usu = documentSnapshot.toObject(Usuario.class);
-                textoMostrar.setText(usu.getPasosTotales());
-            }
-        });
-        return true;
-    }
+
+
 }
