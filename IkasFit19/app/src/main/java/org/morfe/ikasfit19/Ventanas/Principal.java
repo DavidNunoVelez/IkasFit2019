@@ -16,8 +16,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.common.api.Status;
 
 import com.google.android.gms.fitness.Fitness;
@@ -68,10 +70,12 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
         GoogleApiClient.OnConnectionFailedListener, View.OnClickListener {
     public static boolean guardarPasos;
     private FirebaseAuth mAuth;
+
     private static final int REQUEST_OAUTH = 1;
     private static final String AUTH_PENDING = "auth_state_pending";
     private boolean authInProgress = false;
     private GoogleApiClient mApiClient;
+
     private static Button botonRanking;
     private static Button botonGuardar;
     private static TextView textoMostrar;
@@ -82,12 +86,11 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
     private int numeroTotalParticipantes=0;
     private String idCliente="";
     private String ranking="";
+
     @Override
     protected void onStart() {
         super.onStart();
         mApiClient.connect();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-
     }
 
     @Override
@@ -109,10 +112,11 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
         mApiClient = new GoogleApiClient.Builder(this)
                 .addApi(Fitness.SENSORS_API)
-                .addScope(Fitness.SCOPE_ACTIVITY_READ_WRITE) //new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))
+                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .build();
+
         //GoogleFit
 
         //Firestore anónimo
@@ -124,6 +128,20 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInAnonymously:success");
                             FirebaseUser user = mAuth.getCurrentUser();
+                            String uid= mAuth.getUid();
+
+                            BaseDatos bada = new BaseDatos();
+                            bada.guardarPasos(mAuth, 500);
+
+                            DocumentReference docRef = baseDatos.collection("usuarios").document(uid);
+                            docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                @Override
+                                public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                    usu = documentSnapshot.toObject(Usuario.class);
+                                    textoMostrar.setText(usu.getPasosTotales());
+
+                                }
+                            });
 
                         } else {
                             // If sign in fails, display a message to the user.
@@ -138,7 +156,6 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
                 });
         //Firestore anónimo
 
-        buscarUsuario();
     }
 
     public void procesarBoton(int opc){
@@ -146,13 +163,13 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
             case R.id.botonGuardarPasos:
                 FragmentManager fragmentManager = getSupportFragmentManager();
                 Dialogo dialogo = new Dialogo();
+                dialogo.setPrincipal(this);
                 dialogo.show(fragmentManager, "Alerta");
                 if(guardarPasos){
                     int pasosAlmacenados = usu.getPasosTotales();
                     int pasosTotales = pasosAlmacenados + 500;
                     BaseDatos bada = new BaseDatos();
                     bada.guardarPasos(mAuth, pasosTotales);
-                    buscarUsuario();
                     String pasosActuales = String.valueOf(usu.getPasosTotales());
                     Toast.makeText(getApplicationContext(), "Pasos almacenados" , Toast.LENGTH_SHORT).show();
                     textoMostrar.setText(pasosActuales);
@@ -194,32 +211,20 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
         }
     }
 
-    public Usuario buscarUsuario() {
-        DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
-        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-            @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                usu = documentSnapshot.toObject(Usuario.class);
-
-            }
-        });
-        return usu;
-    }
-
     private void registerFitnessDataListener(DataSource dataSource, DataType dataType) {
 
         SensorRequest request = new SensorRequest.Builder()
-                .setDataSource(dataSource)
-                .setDataType(dataType)
-                .setSamplingRate(3, TimeUnit.SECONDS)
+                .setDataSource( dataSource )
+                .setDataType( dataType )
+                .setSamplingRate( 3, TimeUnit.SECONDS )
                 .build();
 
-        Fitness.SensorsApi.add(mApiClient, request, this)
+        Fitness.SensorsApi.add( mApiClient, request, this )
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status status) {
                         if (status.isSuccess()) {
-                            Log.e("GoogleFit", "SensorApi successfully added");
+                            Log.e( "GoogleFit", "SensorApi successfully added" );
                         }
                     }
                 });
@@ -227,17 +232,16 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
     @Override
     public void onConnected(Bundle bundle) {
-
         DataSourcesRequest dataSourceRequest = new DataSourcesRequest.Builder()
-                .setDataTypes(DataType.TYPE_STEP_COUNT_CUMULATIVE)
-                .setDataSourceTypes(DataSource.TYPE_RAW)
+                .setDataTypes( DataType.TYPE_STEP_COUNT_CUMULATIVE )
+                .setDataSourceTypes( DataSource.TYPE_RAW )
                 .build();
 
         ResultCallback<DataSourcesResult> dataSourcesResultCallback = new ResultCallback<DataSourcesResult>() {
             @Override
             public void onResult(DataSourcesResult dataSourcesResult) {
-                for (DataSource dataSource : dataSourcesResult.getDataSources()) {
-                    if (DataType.TYPE_STEP_COUNT_CUMULATIVE.equals(dataSource.getDataType())) {
+                for( DataSource dataSource : dataSourcesResult.getDataSources() ) {
+                    if( DataType.TYPE_STEP_COUNT_CUMULATIVE.equals( dataSource.getDataType() ) ) {
                         registerFitnessDataListener(dataSource, DataType.TYPE_STEP_COUNT_CUMULATIVE);
                     }
                 }
@@ -271,14 +275,12 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
     @Override
     public void onDataPoint(DataPoint dataPoint) {
-        for (final Field field : dataPoint.getDataType().getFields()) {
-            final Value value = dataPoint.getValue(field);
+        for( final Field field : dataPoint.getDataType().getFields() ) {
+            final Value value = dataPoint.getValue( field );
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    //Toast.makeText(getApplicationContext(), "Field: " + field.getName() + " Value: " + value, Toast.LENGTH_SHORT).show();
-                    //textoMostrar.setText(value.toString());
-
+                    Toast.makeText(getApplicationContext(), "Field: " + field.getName() + " Value: " + value, Toast.LENGTH_SHORT).show();
 
                 }
             });
@@ -287,14 +289,14 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_OAUTH) {
+        if( requestCode == REQUEST_OAUTH ) {
             authInProgress = false;
-            if (resultCode == RESULT_OK) {
-                if (!mApiClient.isConnecting() && !mApiClient.isConnected()) {
+            if( resultCode == RESULT_OK ) {
+                if( !mApiClient.isConnecting() && !mApiClient.isConnected() ) {
                     mApiClient.connect();
                 }
-            } else if (resultCode == RESULT_CANCELED) {
-                Log.e("GoogleFit", "RESULT_CANCELED");
+            } else if( resultCode == RESULT_CANCELED ) {
+                Log.e( "GoogleFit", "RESULT_CANCELED" );
             }
         } else {
             Log.e("GoogleFit", "requestCode NOT request_oauth");
@@ -306,7 +308,7 @@ public class Principal extends AppCompatActivity implements OnDataPointListener,
     protected void onStop() {
         super.onStop();
 
-        Fitness.SensorsApi.remove(mApiClient, this)
+        Fitness.SensorsApi.remove( mApiClient, this )
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(Status status) {

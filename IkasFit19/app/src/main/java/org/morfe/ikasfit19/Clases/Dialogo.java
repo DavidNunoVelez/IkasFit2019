@@ -12,6 +12,9 @@ import org.morfe.ikasfit19.Ventanas.Principal;
 
 
 public class Dialogo extends DialogFragment {
+
+    private Principal principal;
+
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             AlertDialog.Builder builder =
@@ -35,4 +38,12 @@ public class Dialogo extends DialogFragment {
 
             return builder.create();
         }
+
+    public Principal getPrincipal() {
+        return principal;
     }
+
+    public void setPrincipal(Principal principal) {
+        this.principal = principal;
+    }
+}
