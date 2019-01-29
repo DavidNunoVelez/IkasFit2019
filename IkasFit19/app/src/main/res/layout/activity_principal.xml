@@ -5,65 +5,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
 
-    tools:context=".Ventanas.Principal">
+    tools:context="org.morfe.ikasfit19.MainActivity">
 
-    <TextView
-        android:id="@+id/textoRanking"
-        android:layout_width="248dp"
-        android:layout_height="92dp"
-        android:layout_marginStart="83dp"
-        android:layout_marginEnd="80dp"
-        android:layout_marginBottom="168dp"
-        android:text="Posición"
-        android:textAlignment="center"
-        android:textSize="50dp"
-        app:layout_constraintBottom_toTopOf="@+id/botonRanking"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+    <Button
+        android:id="@+id/button4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Button"
+        tools:layout_editor_absoluteX="209dp"
+        tools:layout_editor_absoluteY="198dp" />
 
-    <TextView
-        android:id="@+id/textoMostrar"
-        android:layout_width="324dp"
-        android:layout_height="92dp"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="163dp"
-        android:layout_marginEnd="40dp"
-        android:layout_marginBottom="81dp"
-        android:enabled="true"
-        android:text="Pasos Totales"
-        android:textAlignment="center"
-        android:textSize="50dp"
-        app:layout_constraintBottom_toTopOf="@+id/textoRanking"
-        app:layout_constraintEnd_toEndOf="parent"
+    <Button
+        android:id="@+id/button5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="Button"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/botonRanking"
-        android:layout_width="135dp"
-        android:layout_height="51dp"
-        android:layout_marginStart="71dp"
-        android:layout_marginEnd="2dp"
-        android:layout_marginBottom="84dp"
-
-        android:onClick="onClick"
-        android:text="Ranking"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/botonGuardarPasos"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/botonGuardarPasos"
-        android:layout_width="141dp"
-        android:layout_height="51dp"
-        android:layout_marginStart="2dp"
-        android:layout_marginEnd="62dp"
-        android:layout_marginBottom="84dp"
-
-        android:onClick="onClick"
-        android:text="GuardarPasos"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/botonRanking" />/>
+        tools:layout_editor_absoluteY="123dp" />
 
 </android.support.constraint.ConstraintLayout>

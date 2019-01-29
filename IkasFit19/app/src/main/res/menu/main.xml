@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <!--
 Copyright 2016 Google, Inc.
 
@@ -14,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<resources>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="org.morfe.ikasfit19.MainActivity" >
 
-    <string name="app_name">StepCounter</string>
-    <string name="intro_text">Hi! Let\'s track daily cumulative steps. Use the menu to explore additional actions.</string>
-    <string name="action_dump_subs">List Active Subscriptions</string>
-    <string name="action_cancel_subs">Cancel subscriptions</string>
-    <string name="action_settings">Settings</string>
+    <item
+        android:id="@+id/action_read_data"
+        android:orderInCategory="100"
+        android:title="Mostrar Datos"
+        app:showAsAction="never" />
 
-</resources>
+</menu>
