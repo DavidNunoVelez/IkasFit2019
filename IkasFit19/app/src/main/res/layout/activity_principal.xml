@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,21 +8,46 @@
 
     tools:context="org.morfe.ikasfit19.MainActivity">
 
-    <Button
-        android:id="@+id/button4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Button"
-        tools:layout_editor_absoluteX="209dp"
-        tools:layout_editor_absoluteY="198dp" />
+    <TextView
+        android:id="@+id/textoMostrar"
+        android:layout_width="208dp"
+        android:layout_height="91dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="132dp"
+        android:layout_marginEnd="93dp"
+        android:text="Pasos"
+        android:textSize="@android:dimen/app_icon_size" />
+
+    <TextView
+        android:id="@+id/textoRanking"
+        android:layout_width="208dp"
+        android:layout_height="91dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="235dp"
+        android:layout_marginEnd="95dp"
+        android:text="Ranking"
+        android:textSize="@android:dimen/app_icon_size" />
 
     <Button
-        android:id="@+id/button5"
+        android:id="@+id/botonRanking"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:text="Button"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:layout_editor_absoluteY="123dp" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="84dp"
+        android:layout_marginBottom="217dp"
+        android:text="Ranking" />
 
-</android.support.constraint.ConstraintLayout>
+    <Button
+        android:id="@+id/botonGuardarPasos"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="75dp"
+        android:layout_marginBottom="217dp"
+        android:text="Guardar Pasos" />
+
+</RelativeLayout>

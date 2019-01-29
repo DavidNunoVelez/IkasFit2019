@@ -19,9 +19,13 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -40,6 +44,9 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -51,17 +58,28 @@ import java.util.Map;
  * to record steps, and display the daily current step count. It also demonstrates how to
  * authenticate a user with Google Play Services.
  */
-public class MainActivity extends AppCompatActivity {
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
     private FirebaseFirestore baseDatos = FirebaseFirestore.getInstance();
     public static final String TAG = "StepCounter";
     private static final int REQUEST_OAUTH_REQUEST_CODE = 0x1001;
-  private FirebaseAuth mAuth;
+    private FirebaseAuth mAuth;
+    private Button botonRanking;
+    private Button botonMostrar;
+    private TextView textoMostrar;
+    private TextView textoRanking;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_principal);
     mAuth = FirebaseAuth.getInstance();
+
+    botonMostrar = (Button) findViewById(R.id.botonGuardarPasos);
+      botonRanking = (Button) findViewById(R.id.botonRanking);
+      textoMostrar = (TextView) findViewById(R.id.textoMostrar);
+      textoRanking = (TextView) findViewById(R.id.textoRanking);
 
 
     FitnessOptions fitnessOptions =
@@ -167,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
                         : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
                 Log.i(TAG, "Total steps: " + total);
                 guardaPasos(total);
+                textoMostrar.setText(String.valueOf(total));
               }
             })
         .addOnFailureListener(
@@ -218,4 +237,22 @@ public class MainActivity extends AppCompatActivity {
     return super.onOptionsItemSelected(item);
   }
 
+    @Override
+    public void onClick(View v) {
+        procesarBoton(v.getId());
+    }
+
+    private void procesarBoton(int o) {
+
+        switch (o){
+            case R.id.botonGuardarPasos:
+
+                readData();
+
+                break;
+            case R.id.botonRanking:
+
+                break;
+        }
+    }
 }
