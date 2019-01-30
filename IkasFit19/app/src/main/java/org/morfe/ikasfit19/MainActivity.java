@@ -41,6 +41,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -48,8 +49,11 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -70,172 +74,259 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView textoMostrar;
     private TextView textoRanking;
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_principal);
-    mAuth = FirebaseAuth.getInstance();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_principal);
+        mAuth = FirebaseAuth.getInstance();
 
-    botonMostrar = (Button) findViewById(R.id.botonGuardarPasos);
-      botonRanking = (Button) findViewById(R.id.botonRanking);
-      textoMostrar = (TextView) findViewById(R.id.textoMostrar);
-      textoRanking = (TextView) findViewById(R.id.textoRanking);
+        botonMostrar = (Button) findViewById(R.id.botonGuardarPasos);
+        botonRanking = (Button) findViewById(R.id.botonRanking);
+        textoMostrar = (TextView) findViewById(R.id.textoMostrar);
+        textoRanking = (TextView) findViewById(R.id.textoRanking);
 
 
-    FitnessOptions fitnessOptions =
-        FitnessOptions.builder()
-            .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE)
-            .addDataType(DataType.TYPE_STEP_COUNT_DELTA)
-            .build();
-    if (!GoogleSignIn.hasPermissions(GoogleSignIn.getLastSignedInAccount(this), fitnessOptions)) {
-      GoogleSignIn.requestPermissions(
-          this,
-          REQUEST_OAUTH_REQUEST_CODE,
-          GoogleSignIn.getLastSignedInAccount(this),
-          fitnessOptions);
-    } else {
-      subscribe();
+        FitnessOptions fitnessOptions =
+                FitnessOptions.builder()
+                        .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE)
+                        .addDataType(DataType.TYPE_STEP_COUNT_DELTA)
+                        .build();
+        if (!GoogleSignIn.hasPermissions(GoogleSignIn.getLastSignedInAccount(this), fitnessOptions)) {
+            GoogleSignIn.requestPermissions(
+                    this,
+                    REQUEST_OAUTH_REQUEST_CODE,
+                    GoogleSignIn.getLastSignedInAccount(this),
+                    fitnessOptions);
+        } else {
+            subscribe();
+        }
+
+        //Firestore anónimo
+        mAuth.signInAnonymously()
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            // Sign in success, update UI with the signed-in user's information
+                            Log.d(TAG, "signInAnonymously:success");
+                            baseDatos.collection("usuarios")
+                                    .get()
+                                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                            if (task.isSuccessful()) {
+                                                List<Usuario> usuarios = new ArrayList<>();
+
+                                                //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
+                                                for (QueryDocumentSnapshot document : task.getResult()) {
+                                                    Usuario usuario = document.toObject(Usuario.class);
+                                                    usuarios.add(usuario);
+                                                    for (Usuario usu: usuarios){
+                                                        if(usu.getId().equalsIgnoreCase(mAuth.getUid())) {
+                                                            Log.d(TAG, "Existe ese usuario");
+                                                        }else{
+                                                            String hoy = Calendar.getInstance().getTime().toString();
+                                                            Map<String, Object> user = new HashMap<>();
+                                                            user.put("fecha", hoy);
+                                                            user.put("pasosTotales", 0);
+                                                            user.put("id", mAuth.getUid());
+                                                            // Add a new document with a generated ID
+                                                            baseDatos.collection("usuarios").document(mAuth.getUid())
+                                                                    .set(user)
+                                                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                                        @Override
+                                                                        public void onSuccess(Void aVoid) {
+                                                                            android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
+                                                                        }
+                                                                    })
+                                                                    .addOnFailureListener(new OnFailureListener() {
+                                                                        @Override
+                                                                        public void onFailure(@NonNull Exception e) {
+                                                                            android.util.Log.w(TAG, "Error writing document", e);
+                                                                        }
+                                                                    });
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                Log.d(TAG, "Error getting documents: ", task.getException());
+                                            }
+                                        }
+                                    });
+
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Log.w(TAG, "signInAnonymously:failure", task.getException());
+                            Toast.makeText(MainActivity.this, "Authentication failed.",
+                                    Toast.LENGTH_SHORT).show();
+
+                        }
+
+                        // ...
+                    }
+                });
+        //Firestore anónimo
+
+
     }
 
-    //Firestore anónimo
-    mAuth.signInAnonymously()
-            .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-              @Override
-              public void onComplete(@NonNull Task<AuthResult> task) {
-                if (task.isSuccessful()) {
-                  // Sign in success, update UI with the signed-in user's information
-                  Log.d(TAG, "signInAnonymously:success");
-                  String hoy = Calendar.getInstance().getTime().toString();
-                  Map<String, Object> user = new HashMap<>();
-                  user.put("fecha", hoy);
-                  user.put("pasosTotales", 0);
-                  user.put("id", mAuth.getUid());
-                  // Add a new document with a generated ID
-                  baseDatos.collection("usuarios").document(mAuth.getUid())
-                          .set(user)
-                          .addOnSuccessListener(new OnSuccessListener<Void>() {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == REQUEST_OAUTH_REQUEST_CODE) {
+                subscribe();
+            }
+        }
+    }
+
+    /**
+     * Records step data by requesting a subscription to background step data.
+     */
+    public void subscribe() {
+        // To create a subscription, invoke the Recording API. As soon as the subscription is
+        // active, fitness data will start recording.
+        Fitness.getRecordingClient(this, GoogleSignIn.getLastSignedInAccount(this))
+                .subscribe(DataType.TYPE_STEP_COUNT_CUMULATIVE)
+                .addOnCompleteListener(
+                        new OnCompleteListener<Void>() {
                             @Override
-                            public void onSuccess(Void aVoid) {
-                              android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
+                            public void onComplete(@NonNull Task<Void> task) {
+                                if (task.isSuccessful()) {
+                                    Log.i(TAG, "Successfully subscribed!");
+                                } else {
+                                    Log.w(TAG, "There was a problem subscribing.", task.getException());
+                                }
                             }
-                          })
-                          .addOnFailureListener(new OnFailureListener() {
+                        });
+    }
+
+    /**
+     * Reads the current daily step total, computed from midnight of the current day on the device's
+     * current timezone.
+     */
+    private void readDataSinGuardar() {
+        Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
+                .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
+                .addOnSuccessListener(
+                        new OnSuccessListener<DataSet>() {
+                            @Override
+                            public void onSuccess(DataSet dataSet) {
+                                int total =
+                                        dataSet.isEmpty()
+                                                ? 0
+                                                : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
+                                Log.i(TAG, "Total steps: " + total);
+                                textoMostrar.setText(String.valueOf(total));
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-                              android.util.Log.w(TAG, "Error writing document", e);
+                                Log.w(TAG, "There was a problem getting the step count.", e);
                             }
-                          });
+                        });
 
-                } else {
-                  // If sign in fails, display a message to the user.
-                  Log.w(TAG, "signInAnonymously:failure", task.getException());
-                  Toast.makeText(MainActivity.this, "Authentication failed.",
-                          Toast.LENGTH_SHORT).show();
-
-                }
-
-                // ...
-              }
-            });
-    //Firestore anónimo
-  }
-
-  @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    if (resultCode == Activity.RESULT_OK) {
-      if (requestCode == REQUEST_OAUTH_REQUEST_CODE) {
-        subscribe();
-      }
     }
-  }
 
-  /** Records step data by requesting a subscription to background step data. */
-  public void subscribe() {
-    // To create a subscription, invoke the Recording API. As soon as the subscription is
-    // active, fitness data will start recording.
-    Fitness.getRecordingClient(this, GoogleSignIn.getLastSignedInAccount(this))
-        .subscribe(DataType.TYPE_STEP_COUNT_CUMULATIVE)
-        .addOnCompleteListener(
-            new OnCompleteListener<Void>() {
-              @Override
-              public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful()) {
-                  Log.i(TAG, "Successfully subscribed!");
-                } else {
-                  Log.w(TAG, "There was a problem subscribing.", task.getException());
-                }
-              }
-            });
-  }
+    private void readDataGuardando() {
+        Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
+                .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
+                .addOnSuccessListener(
+                        new OnSuccessListener<DataSet>() {
+                            @Override
+                            public void onSuccess(DataSet dataSet) {
+                                int total =
+                                        dataSet.isEmpty()
+                                                ? 0
+                                                : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
+                                Log.i(TAG, "Total steps: " + total);
+                                guardaPasos(total);
+                                textoMostrar.setText(String.valueOf(total));
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Log.w(TAG, "There was a problem getting the step count.", e);
+                            }
+                        });
 
-  /**
-   * Reads the current daily step total, computed from midnight of the current day on the device's
-   * current timezone.
-   */
-  private void readData() {
-    Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
-        .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
-        .addOnSuccessListener(
-            new OnSuccessListener<DataSet>() {
-              @Override
-              public void onSuccess(DataSet dataSet) {
-                long total =
-                    dataSet.isEmpty()
-                        ? 0
-                        : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
-                Log.i(TAG, "Total steps: " + total);
-                guardaPasos(total);
-                textoMostrar.setText(String.valueOf(total));
-              }
-            })
-        .addOnFailureListener(
-            new OnFailureListener() {
-              @Override
-              public void onFailure(@NonNull Exception e) {
-                Log.w(TAG, "There was a problem getting the step count.", e);
-              }
-            });
-
-  }
-  public void guardaPasos(long totalPasos){
-      String hoy = Calendar.getInstance().getTime().toString();
-      Map<String, Object> user = new HashMap<>();
-      user.put("fecha", hoy);
-      user.put("pasosTotales", totalPasos);
-      user.put("id", mAuth.getUid());
-      // Add a new document with a generated ID
-      baseDatos.collection("usuarios").document(mAuth.getUid())
-              .set(user)
-              .addOnSuccessListener(new OnSuccessListener<Void>() {
-                  @Override
-                  public void onSuccess(Void aVoid) {
-                      android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
-                  }
-              })
-              .addOnFailureListener(new OnFailureListener() {
-                  @Override
-                  public void onFailure(@NonNull Exception e) {
-                      android.util.Log.w(TAG, "Error writing document", e);
-                  }
-              });
-  }
-
-  @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    // Inflate the main; this adds items to the action bar if it is present.
-    getMenuInflater().inflate(R.menu.main, menu);
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    int id = item.getItemId();
-    if (id == R.id.action_read_data) {
-      readData();
-      return true;
     }
-    return super.onOptionsItemSelected(item);
-  }
+
+    public void guardaPasos(long totalPasos) {
+        //Ir a BD
+        //Buscar ese Usuario
+        //Buscar cuando fué la última vez que almaceno pasosos
+        //Si no es hoy 0, dejar guardar
+        //Si es hoy::Preguntar si es la primera vez que guarda
+        //Si es la primera vez que guarda, guardar los pasos integros, la cifra total que nos sale
+        //Si no es la primera vez, guardar la diferencia
+
+
+
+
+       final Date hoy = Calendar.getInstance().getTime();
+       /* baseDatos.collection("usuarios").whereEqualTo("id",mAuth.getUid())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                Usuario usuario = document.toObject(Usuario.class);
+
+                              if(usuario.getFecha()!= hoy){
+
+                              }
+
+
+                            }
+                        } else {
+                            Log.d(TAG, "Error getting documents: ", task.getException());
+                        }
+                    }
+                });*/
+
+        Map<String, Object> user = new HashMap<>();
+        user.put("fecha", hoy);
+        user.put("pasosTotales", totalPasos);
+        user.put("id", mAuth.getUid());
+        // Add a new document with a generated ID
+        baseDatos.collection("usuarios").document(mAuth.getUid())
+                .set(user)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        android.util.Log.w(TAG, "Error writing document", e);
+                    }
+                });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the main; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_read_data) {
+            readDataSinGuardar();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     @Override
     public void onClick(View v) {
@@ -244,15 +335,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void procesarBoton(int o) {
 
-        switch (o){
+        switch (o) {
             case R.id.botonGuardarPasos:
-
-                readData();
-
+                readDataGuardando();
                 break;
             case R.id.botonRanking:
-
+                crearRanking();
                 break;
         }
+    }
+
+    public void crearRanking() {
+
+        //Consulto documentos ordenados por pasos en orden descendente, para el que más tenga sea el primero.
+        baseDatos.collection("usuarios").orderBy("pasosTotales", Query.Direction.DESCENDING)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        int numeroTotalusuarios = 0;
+
+                        if (task.isSuccessful()) {
+                            numeroTotalusuarios = task.getResult().size();
+                            List<Usuario> usuarios = new ArrayList<>();
+                            //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                Usuario usuario = document.toObject(Usuario.class);
+                                usuarios.add(usuario);
+
+                                //Recorro esa List y si el usuario que está conectado coincide con uno de esa lista, mustro su posición y el total de usuarios
+
+                                int posicion = 0;
+                                for (Usuario usu : usuarios) {
+                                    posicion++;
+                                    if (usu.getId().equalsIgnoreCase(mAuth.getUid())) {
+                                        textoRanking.setText(String.valueOf(posicion) + " / " + String.valueOf(numeroTotalusuarios));
+                                    }
+                                }
+                            }
+                        } else {
+                            Log.d(TAG, "Error getting documents: ", task.getException());
+                        }
+                    }
+
+
+                });
+
+    }
+
+    public void existeElUsuario() {
+
+
     }
 }
