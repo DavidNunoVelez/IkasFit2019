@@ -7,10 +7,11 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.util.Log;
 
+import com.google.android.gms.fit.samples.stepcounter.R;
+
 public class Dialogo extends DialogFragment {
 
-    private MainActivity principal;
-
+    private MainActivity mainActivity;
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder =
@@ -20,26 +21,23 @@ public class Dialogo extends DialogFragment {
                 .setPositiveButton("Aceptar", new DialogInterface.OnClickListener()  {
                     public void onClick(DialogInterface dialog, int id) {
                         Log.i("Dialogos", "Confirmacion Aceptada.");
-
+                        MainActivity.guardarPasos=true;
                         dialog.cancel();
                     }
                 })
                 .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         Log.i("Dialogos", "Confirmacion Cancelada.");
-
+                        MainActivity.guardarPasos=false;
                         dialog.cancel();
                     }
-                });
-
+                })
+                .setView(R.layout.activity_dialogo);
         return builder.create();
+
     }
 
-    public MainActivity getPrincipal() {
-        return principal;
-    }
-
-    public void setPrincipal(MainActivity principal) {
-        this.principal = principal;
+    public void setMainActivity(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
     }
 }

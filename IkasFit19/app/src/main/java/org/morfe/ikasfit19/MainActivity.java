@@ -16,10 +16,10 @@
 package org.morfe.ikasfit19;
 
 import android.app.Activity;
+import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -44,6 +44,8 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -73,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button botonMostrar;
     private TextView textoMostrar;
     private TextView textoRanking;
+    public static boolean guardarPasos=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         textoMostrar = (TextView) findViewById(R.id.textoMostrar);
         textoRanking = (TextView) findViewById(R.id.textoRanking);
 
-
+        //Google Fit API inicio
         FitnessOptions fitnessOptions =
                 FitnessOptions.builder()
                         .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE)
@@ -100,8 +103,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else {
             subscribe();
         }
+        //Google Fit API fin
 
-        //Firestore anónimo
+        //Firestore anónimo inicio
         mAuth.signInAnonymously()
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
@@ -109,65 +113,74 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInAnonymously:success");
+                            //Vamos a la base de datos y buscamos todos los ID de documentos
                             baseDatos.collection("usuarios")
                                     .get()
                                     .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                                         @Override
                                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
                                             if (task.isSuccessful()) {
-                                                List<Usuario> usuarios = new ArrayList<>();
-
-                                                //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
+                                                boolean existe=false;
                                                 for (QueryDocumentSnapshot document : task.getResult()) {
-                                                    Usuario usuario = document.toObject(Usuario.class);
-                                                    usuarios.add(usuario);
-                                                    for (Usuario usu: usuarios){
-                                                        if(usu.getId().equalsIgnoreCase(mAuth.getUid())) {
-                                                            Log.d(TAG, "Existe ese usuario");
-                                                        }else{
-                                                            String hoy = Calendar.getInstance().getTime().toString();
-                                                            Map<String, Object> user = new HashMap<>();
-                                                            user.put("fecha", hoy);
-                                                            user.put("pasosTotales", 0);
-                                                            user.put("id", mAuth.getUid());
-                                                            // Add a new document with a generated ID
-                                                            baseDatos.collection("usuarios").document(mAuth.getUid())
-                                                                    .set(user)
-                                                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                                        @Override
-                                                                        public void onSuccess(Void aVoid) {
-                                                                            android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
-                                                                        }
-                                                                    })
-                                                                    .addOnFailureListener(new OnFailureListener() {
-                                                                        @Override
-                                                                        public void onFailure(@NonNull Exception e) {
-                                                                            android.util.Log.w(TAG, "Error writing document", e);
-                                                                        }
-                                                                    });
+                                                    String id = document.getId();
+                                                  if(id.equalsIgnoreCase(mAuth.getUid())){
+                                                      existe=true;
+                                                  }else if(existe){
+                                                      existe=true;
+                                                  }
+                                                }
+                                                //Si no existe en la base de datos ese usuario lo creamos con la fecha de hoy y los pasos a 0
+                                                if(!existe){
+                                                    final Date hoy = Calendar.getInstance().getTime();
+                                                    Map<String, Object> user = new HashMap<>();
+                                                    user.put("fecha", hoy);
+                                                    user.put("pasosTotales", 0);
+                                                    user.put("id", mAuth.getUid());
+                                                    // Add a new document with a generated ID
+                                                    baseDatos.collection("usuarios").document(mAuth.getUid())
+                                                            .set(user)
+                                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                                @Override
+                                                                public void onSuccess(Void aVoid) {
+                                                                    android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
+                                                                }
+                                                            })
+                                                            .addOnFailureListener(new OnFailureListener() {
+                                                                @Override
+                                                                public void onFailure(@NonNull Exception e) {
+                                                                    android.util.Log.w(TAG, "Error writing document", e);
+                                                                }
+                                                            });
+                                                }
+                                                //Buscamos ese usuario en la base de datos exista o no, y mostramos sus pasos al iniciar la APP
+                                                DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
+                                                docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                                    @Override
+                                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                                        if (task.isSuccessful()) {
+                                                            DocumentSnapshot document = task.getResult();
+                                                            Usuario usua = document.toObject(Usuario.class);
+                                                            textoMostrar.setText(String.valueOf(usua.getPasosTotales()));
+                                                        } else {
+                                                            Log.d(TAG, "get failed with ", task.getException());
                                                         }
                                                     }
-                                                }
+                                                });
+                                                //////////////////////////////////////////////////////////////////////////////////////////////////////
                                             } else {
                                                 Log.d(TAG, "Error getting documents: ", task.getException());
                                             }
                                         }
                                     });
-
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.w(TAG, "signInAnonymously:failure", task.getException());
                             Toast.makeText(MainActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
-
                         }
-
-                        // ...
                     }
                 });
-        //Firestore anónimo
-
-
+        //Firestore anónimo fin
     }
 
     @Override
@@ -179,9 +192,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    /**
-     * Records step data by requesting a subscription to background step data.
-     */
     public void subscribe() {
         // To create a subscription, invoke the Recording API. As soon as the subscription is
         // active, fitness data will start recording.
@@ -200,10 +210,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         });
     }
 
-    /**
-     * Reads the current daily step total, computed from midnight of the current day on the device's
-     * current timezone.
-     */
     private void readDataSinGuardar() {
         Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
                 .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
@@ -256,59 +262,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void guardaPasos(long totalPasos) {
-        //Ir a BD
-        //Buscar ese Usuario
-        //Buscar cuando fué la última vez que almaceno pasosos
-        //Si no es hoy 0, dejar guardar
-        //Si es hoy::Preguntar si es la primera vez que guarda
-        //Si es la primera vez que guarda, guardar los pasos integros, la cifra total que nos sale
-        //Si no es la primera vez, guardar la diferencia
-
-
-
-
-       final Date hoy = Calendar.getInstance().getTime();
-       /* baseDatos.collection("usuarios").whereEqualTo("id",mAuth.getUid())
-                .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if (task.isSuccessful()) {
-                            //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                Usuario usuario = document.toObject(Usuario.class);
-
-                              if(usuario.getFecha()!= hoy){
-
-                              }
-
-
-                            }
-                        } else {
-                            Log.d(TAG, "Error getting documents: ", task.getException());
+            final Date hoy2 = Calendar.getInstance().getTime();
+            Map<String, Object> user = new HashMap<>();
+            user.put("fecha", hoy2);
+            user.put("pasosTotales", totalPasos);
+            user.put("id", mAuth.getUid());
+            // Add a new document with a generated ID
+            baseDatos.collection("usuarios").document(mAuth.getUid())
+                    .set(user)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
                         }
-                    }
-                });*/
-
-        Map<String, Object> user = new HashMap<>();
-        user.put("fecha", hoy);
-        user.put("pasosTotales", totalPasos);
-        user.put("id", mAuth.getUid());
-        // Add a new document with a generated ID
-        baseDatos.collection("usuarios").document(mAuth.getUid())
-                .set(user)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        android.util.Log.w(TAG, "Error writing document", e);
-                    }
-                });
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            android.util.Log.w(TAG, "Error writing document", e);
+                        }
+                    });
     }
 
     @Override
@@ -334,9 +307,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void procesarBoton(int o) {
-
         switch (o) {
             case R.id.botonGuardarPasos:
+                Dialogo dialogo = new Dialogo();
+                dialogo.setMainActivity(this);
+                dialogo.show(getSupportFragmentManager(),"Aviso");
                 readDataGuardando();
                 break;
             case R.id.botonRanking:
@@ -380,11 +355,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                 });
-
-    }
-
-    public void existeElUsuario() {
-
 
     }
 }
