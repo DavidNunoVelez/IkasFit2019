@@ -271,8 +271,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     DocumentSnapshot document = task.getResult();
                     Usuario usuario = document.toObject(Usuario.class);
                     Date fechaUltimaGuardada = usuario.getFecha();
+                    //TODO comparar fechas
 
-                    if(fechaUltimaGuardada.)
                 } else {
                     Log.d(TAG, "get failed with ", task.getException());
                 }
