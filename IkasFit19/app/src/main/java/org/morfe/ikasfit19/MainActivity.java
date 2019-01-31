@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button botonMostrar;
     private TextView textoMostrar;
     private TextView textoRanking;
-    public static boolean guardarPasos=false;
+    public static boolean guardarPasos = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,20 +120,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         @Override
                                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
                                             if (task.isSuccessful()) {
-                                                boolean existe=false;
+                                                boolean existe = false;
                                                 for (QueryDocumentSnapshot document : task.getResult()) {
                                                     String id = document.getId();
-                                                  if(id.equalsIgnoreCase(mAuth.getUid())){
-                                                      existe=true;
-                                                  }else if(existe){
-                                                      existe=true;
-                                                  }
+                                                    if (id.equalsIgnoreCase(mAuth.getUid())) {
+                                                        existe = true;
+                                                    } else if (existe) {
+                                                        existe = true;
+                                                    }
                                                 }
                                                 //Si no existe en la base de datos ese usuario lo creamos con la fecha de hoy y los pasos a 0
-                                                if(!existe){
-                                                    final Date hoy = Calendar.getInstance().getTime();
+                                                if (!existe) {
+                                                    Date hoyLocal = Calendar.getInstance().getTime();
                                                     Map<String, Object> user = new HashMap<>();
-                                                    user.put("fecha", hoy);
+                                                    user.put("fecha", hoyLocal);
                                                     user.put("pasosTotales", 0);
                                                     user.put("id", mAuth.getUid());
                                                     // Add a new document with a generated ID
@@ -262,26 +262,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void guardaPasos(long totalPasos) {
-            final Date hoy2 = Calendar.getInstance().getTime();
-            Map<String, Object> user = new HashMap<>();
-            user.put("fecha", hoy2);
-            user.put("pasosTotales", totalPasos);
-            user.put("id", mAuth.getUid());
-            // Add a new document with a generated ID
-            baseDatos.collection("usuarios").document(mAuth.getUid())
-                    .set(user)
-                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            android.util.Log.w(TAG, "Error writing document", e);
-                        }
-                    });
+
+        DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
+        docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    Usuario usuario = document.toObject(Usuario.class);
+                    Date fechaUltimaGuardada = usuario.getFecha();
+
+                    if(fechaUltimaGuardada.)
+                } else {
+                    Log.d(TAG, "get failed with ", task.getException());
+                }
+            }
+        });
+
+        Date hoy2 = Calendar.getInstance().getTime();
+        Map<String, Object> user = new HashMap<>();
+        user.put("fecha", hoy2);
+        user.put("pasosTotales", totalPasos);
+        user.put("id", mAuth.getUid());
+        // Add a new document with a generated ID
+        baseDatos.collection("usuarios").document(mAuth.getUid())
+                .set(user)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        android.util.Log.d(TAG, "DocumentSnapshot successfully written!");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        android.util.Log.w(TAG, "Error writing document", e);
+                    }
+                });
     }
 
     @Override
@@ -311,7 +328,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.botonGuardarPasos:
                 Dialogo dialogo = new Dialogo();
                 dialogo.setMainActivity(this);
-                dialogo.show(getSupportFragmentManager(),"Aviso");
+                dialogo.show(getSupportFragmentManager(), "Aviso");
                 readDataGuardando();
                 break;
             case R.id.botonRanking:
@@ -329,7 +346,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         int numeroTotalusuarios = 0;
-
                         if (task.isSuccessful()) {
                             numeroTotalusuarios = task.getResult().size();
                             List<Usuario> usuarios = new ArrayList<>();
@@ -337,9 +353,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             for (QueryDocumentSnapshot document : task.getResult()) {
                                 Usuario usuario = document.toObject(Usuario.class);
                                 usuarios.add(usuario);
-
                                 //Recorro esa List y si el usuario que está conectado coincide con uno de esa lista, mustro su posición y el total de usuarios
-
                                 int posicion = 0;
                                 for (Usuario usu : usuarios) {
                                     posicion++;
