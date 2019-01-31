@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button botonMostrar;
     private TextView textoMostrar;
     private TextView textoRanking;
+    private TextView textoMostrarTotal;
     public static boolean guardarPasos = false;
 
     @Override
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         botonRanking = (Button) findViewById(R.id.botonRanking);
         textoMostrar = (TextView) findViewById(R.id.textoMostrar);
         textoRanking = (TextView) findViewById(R.id.textoRanking);
+        textoMostrarTotal = (TextView) findViewById(R.id.textoMostrarTotal);
 
         //Google Fit API inicio
         FitnessOptions fitnessOptions =
@@ -161,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                             DocumentSnapshot document = task.getResult();
                                                             Usuario usua = document.toObject(Usuario.class);
                                                             textoMostrar.setText(String.valueOf(usua.getPasosTotales()));
+                                                            textoMostrarTotal.setText(String.valueOf(usua.getPasosTotales()));
                                                         } else {
                                                             Log.d(TAG, "get failed with ", task.getException());
                                                         }
