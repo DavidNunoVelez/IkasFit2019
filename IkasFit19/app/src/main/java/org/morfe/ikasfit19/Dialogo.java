@@ -12,12 +12,13 @@ import com.google.android.gms.fit.samples.stepcounter.R;
 public class Dialogo extends DialogFragment {
 
     private MainActivity mainActivity;
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder =
                 new AlertDialog.Builder(getActivity());
-        builder.setMessage("¿Quieres guardar los pasos?")
-                .setTitle("Confirmacion")
+        builder.setMessage("Sigue así y anda todo lo que puedas que es muy sano.")
+                .setTitle("¡Pasos guardados!")
                 .setPositiveButton("Aceptar", new DialogInterface.OnClickListener()  {
                     public void onClick(DialogInterface dialog, int id) {
                         Log.i("Dialogos", "Confirmacion Aceptada.");
@@ -25,18 +26,9 @@ public class Dialogo extends DialogFragment {
                         dialog.cancel();
                     }
                 })
-                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        Log.i("Dialogos", "Confirmacion Cancelada.");
-                        MainActivity.guardarPasos=false;
-                        dialog.cancel();
-                    }
-                })
                 .setView(R.layout.activity_dialogo);
         return builder.create();
-
     }
-
     public void setMainActivity(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
     }

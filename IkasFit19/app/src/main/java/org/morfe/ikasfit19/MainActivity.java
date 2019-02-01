@@ -2,6 +2,9 @@ package org.morfe.ikasfit19;
 
 import android.app.Activity;
 
+import android.app.Dialog;
+import android.app.DialogFragment;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -9,7 +12,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView textoRanking;
     private TextView textoMostrarTotal;
     public static boolean guardarPasos = false;
+    private String [] usuariosLista= new String[]{"asdfasdf","dfghdfghdfgh","wertwert","adsvasdv","jtkuykkutyuk","asdfsdf","jtkuykkutyuk","asdfsdf"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +75,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         textoRanking = (TextView) findViewById(R.id.textoRanking);
         textoMostrarTotal = (TextView) findViewById(R.id.textoMostrarTotal);
 
-        //Google Fit API inicio
+
+        //Google Fit API builder
         FitnessOptions fitnessOptions =
                 FitnessOptions.builder()
                         .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE)
@@ -84,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else {
             subscribe();
         }
-        //Google Fit API fin
+        //Google Fit API builder
 
         //Firestore anónimo inicio
         mAuth.signInAnonymously()
@@ -92,15 +99,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
+                            // Al iniciar sesión correctamente, actualiza la interfaz de usuario con la información del usuario registrado
                             Log.d(TAG, "signInAnonymously:success");
-                            //Vamos a la base de datos y buscamos todos los ID de documentos
+                            //Va a base de datos y busca todos los ID de los docu,entos documentos
                             baseDatos.collection("usuarios")
                                     .get()
                                     .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                                         @Override
                                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
                                             if (task.isSuccessful()) {
+                                                //Si en la base de datos existe el  ID que se está conectando, pongo bandera "exixte".
                                                 boolean existe = false;
                                                 for (QueryDocumentSnapshot document : task.getResult()) {
                                                     String id = document.getId();
@@ -118,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                     user.put("pasosTotales", 0);
                                                     user.put("pasosParcial", 0);
                                                     user.put("id", mAuth.getUid());
-                                                    // Add a new document with a generated ID
+                                                    // Añade un documento a la colección con la ID generada
                                                     baseDatos.collection("usuarios").document(mAuth.getUid())
                                                             .set(user)
                                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -134,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                                 }
                                                             });
                                                 }
-                                                //Buscamos ese usuario en la base de datos exista o no, y mostramos sus pasos al iniciar la APP
+                                                //Busca ese usuario en la base de datos exista o no, y muestra sus pasos al iniciar la APP
                                                 DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
                                                 docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                                     @Override
@@ -149,14 +157,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                         }
                                                     }
                                                 });
-                                                //////////////////////////////////////////////////////////////////////////////////////////////////////
+
                                             } else {
                                                 Log.d(TAG, "Error getting documents: ", task.getException());
                                             }
                                         }
                                     });
                         } else {
-                            // If sign in fails, display a message to the user.
+                            // Si la señal falla, mandamos mensaje al usuario
                             Log.w(TAG, "signInAnonymously:failure", task.getException());
                             Toast.makeText(MainActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
@@ -165,7 +173,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 });
         //Firestore anónimo fin
     }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
@@ -174,10 +181,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
-
     public void subscribe() {
-        // To create a subscription, invoke the Recording API. As soon as the subscription is
-        // active, fitness data will start recording.
+        //Para crear una suscripción, se llama a la API de grabación.
+        // Tan pronto como la suscripción esté activa, los datos de aptitud física comenzarán a registrarse.
         Fitness.getRecordingClient(this, GoogleSignIn.getLastSignedInAccount(this))
                 .subscribe(DataType.TYPE_STEP_COUNT_CUMULATIVE)
                 .addOnCompleteListener(
@@ -193,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         });
     }
 
+    //Este método recopila los datos de los pasos en la variable long "total" para mostrarlo en la UI
     private void readDataSinGuardar() {
         Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
                 .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
@@ -217,7 +224,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         });
 
     }
-
+    //Este método recopila los datos de los pasos en la variable long "pasosGenerados" para mostrarlo en la UI
+    //También llama a guardar los datos en base de datos.
     private void readDataGuardando() {
         Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
                 .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
@@ -230,10 +238,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                 ? 0
                                                 : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
                                 Log.i(TAG, "Total steps: " + pasosGenerados);
-
-                                //TODO: Crear una variable parcial, que cuando acabe el dia y se ponga a cero el kontador de
-                                //TODO:  pasos compruebe los pasosque meto son menos que el parcial anterior? SI: sumo el ultimo parcial almacenado
-                                //TODO:  al parcial que voy a almacenar gemerado ese dia
+                                //Va a la base de datos y busca ese usuario para sacar sus datos antes de guardar
                                 DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
                                 docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                     @Override
@@ -245,24 +250,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                           long totalAmacen=usua.getPasosTotales();
                                           long pasosTotalesAAlmacenar=0;
                                           long pasosParcialesAAlmacenar=0;
-                                          if(pasosGenerados<=parcialAmacen){
+                                            //Cada dia el parcial de pasos se reinicia a cero,
+                                            // este código evita sumas incorrectas tanto del total de pasos como del parcial.
+                                          if(pasosGenerados<parcialAmacen){
                                               pasosParcialesAAlmacenar=pasosGenerados;
                                               pasosTotalesAAlmacenar=totalAmacen+pasosGenerados;
                                           }else{
                                               pasosParcialesAAlmacenar=pasosGenerados;
                                               pasosTotalesAAlmacenar=totalAmacen+(pasosGenerados-parcialAmacen);
                                           }
+                                          //Llamamos a guardar los pasos parciales y totales. Actualizamos la UI
                                             guardaPasos(pasosParcialesAAlmacenar,pasosTotalesAAlmacenar);
+                                            textoMostrar.setText(String.valueOf(pasosGenerados));
+                                            textoMostrarTotal.setText(String.valueOf(pasosTotalesAAlmacenar));
                                         } else {
                                             Log.d(TAG, "get failed with ", task.getException());
                                         }
                                     }
                                 });
-
-
-
-                                textoMostrar.setText(String.valueOf(pasosGenerados));
-                                textoMostrarTotal.setText(String.valueOf(pasosGenerados));
                             }
                         })
                 .addOnFailureListener(
@@ -274,41 +279,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         });
 
     }
-
+    //Método que guarda los pasos en Base de datos
     public void guardaPasos( long parcialPasos,long totalPasos) {
-
-        //Crear una variable parcial, que cuando acabe el dia y se ponga a cero el kontador de pasos compruebe los pasos
-        //que meto son menos que el parcial anterior? SI: sumo el ultimo parcial almacenado al parcial que voy a almacenar gemerado ese dia
-
-
-        /*DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
-        docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot document = task.getResult();
-                    Usuario usuario = document.toObject(Usuario.class);
-                    Date fechaUltimaGuardadaMal = usuario.getFecha();
-                    Date hoyMal = Calendar.getInstance().getTime();
-                    SimpleDateFormat dt1 = new SimpleDateFormat("yyyy-MM-dd");
-                    Date hoyBien=null;
-                    Date fechaUltimaGuardadaBien=null;
-                    try {
-                        hoyBien = dt1.parse(hoyMal.toString());
-                        fechaUltimaGuardadaBien =dt1.parse(fechaUltimaGuardadaMal.toString());
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-
-                   int resultado= fechaUltimaGuardadaBien.compareTo(hoyBien);
-                    Date hoy2 = Calendar.getInstance().getTime();
-                } else {
-                    Log.d(TAG, "get failed with ", task.getException());
-                }
-            }
-        });*/
-
-
         Date hoy2 = Calendar.getInstance().getTime();
         Map<String, Object> user = new HashMap<>();
         user.put("fecha", hoy2);
@@ -343,9 +315,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_read_data) {
-            readDataSinGuardar();
+            Dialogo dialogo = new Dialogo();
+            dialogo.setMainActivity(this);
+            dialogo.show(getSupportFragmentManager(), "Aviso");
+            readDataGuardando();
             return true;
+        }else{
+            //TODO:Lista ranking
         }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -357,19 +335,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void procesarBoton(int o) {
         switch (o) {
             case R.id.botonGuardarPasos:
-                Dialogo dialogo = new Dialogo();
-                dialogo.setMainActivity(this);
-                dialogo.show(getSupportFragmentManager(), "Aviso");
-                readDataGuardando();
+                readDataSinGuardar();
                 break;
             case R.id.botonRanking:
                 crearRanking();
                 break;
         }
     }
-
+    //Método que muestra la posición del usuario conectado en el ranking de la base de datos, según sus "pasosTotales"
     public void crearRanking() {
-
         //Consulto documentos ordenados por pasos en orden descendente, para el que más tenga sea el primero.
         baseDatos.collection("usuarios").orderBy("pasosTotales", Query.Direction.DESCENDING)
                 .get()
@@ -400,6 +374,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                 });
-
     }
+
+
 }

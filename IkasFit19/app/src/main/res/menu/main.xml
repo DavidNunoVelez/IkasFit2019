@@ -22,7 +22,12 @@ limitations under the License.
         android:id="@+id/action_read_data"
         android:orderInCategory="100"
         android:textColor="@android:color/holo_blue_bright"
-        android:title="Mostrar Datos"
+        android:title="Guardar Pasos"
         app:showAsAction="never" />
-
+    <item
+        android:id="@+id/action_read_ranking"
+        android:orderInCategory="100"
+        android:textColor="@android:color/holo_blue_bright"
+        android:title="Ver Clasificación"
+        app:showAsAction="never" />
 </menu>
