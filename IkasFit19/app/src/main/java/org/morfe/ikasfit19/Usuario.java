@@ -5,6 +5,7 @@ import java.util.Date;
 public class Usuario {
 
     private long pasosTotales;
+    private long pasosParcial;
     private Date fecha;
     private String id;
 
@@ -34,5 +35,13 @@ public class Usuario {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public long getPasosParcial() {
+        return pasosParcial;
+    }
+
+    public void setPasosParcial(long pasosParcial) {
+        this.pasosParcial = pasosParcial;
     }
 }

@@ -1,22 +1,7 @@
-/*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.morfe.ikasfit19;
 
 import android.app.Activity;
-import android.app.FragmentManager;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -41,7 +26,6 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
-import com.google.firebase.Timestamp;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
@@ -51,19 +35,14 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-
-/**
- * This sample demonstrates combining the Recording API and History API of the Google Fit platform
- * to record steps, and display the daily current step count. It also demonstrates how to
- * authenticate a user with Google Play Services.
- */
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -137,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                     Map<String, Object> user = new HashMap<>();
                                                     user.put("fecha", hoyLocal);
                                                     user.put("pasosTotales", 0);
+                                                    user.put("pasosParcial", 0);
                                                     user.put("id", mAuth.getUid());
                                                     // Add a new document with a generated ID
                                                     baseDatos.collection("usuarios").document(mAuth.getUid())
@@ -162,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                         if (task.isSuccessful()) {
                                                             DocumentSnapshot document = task.getResult();
                                                             Usuario usua = document.toObject(Usuario.class);
-                                                            textoMostrar.setText(String.valueOf(usua.getPasosTotales()));
+                                                           readDataSinGuardar();
                                                             textoMostrarTotal.setText(String.valueOf(usua.getPasosTotales()));
                                                         } else {
                                                             Log.d(TAG, "get failed with ", task.getException());
@@ -245,13 +225,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         new OnSuccessListener<DataSet>() {
                             @Override
                             public void onSuccess(DataSet dataSet) {
-                                int total =
+                                final int pasosGenerados =
                                         dataSet.isEmpty()
                                                 ? 0
                                                 : dataSet.getDataPoints().get(0).getValue(Field.FIELD_STEPS).asInt();
-                                Log.i(TAG, "Total steps: " + total);
-                                guardaPasos(total);
-                                textoMostrar.setText(String.valueOf(total));
+                                Log.i(TAG, "Total steps: " + pasosGenerados);
+
+                                //TODO: Crear una variable parcial, que cuando acabe el dia y se ponga a cero el kontador de
+                                //TODO:  pasos compruebe los pasosque meto son menos que el parcial anterior? SI: sumo el ultimo parcial almacenado
+                                //TODO:  al parcial que voy a almacenar gemerado ese dia
+                                DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
+                                docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                        if (task.isSuccessful()) {
+                                            DocumentSnapshot document = task.getResult();
+                                            Usuario usua = document.toObject(Usuario.class);
+                                          long parcialAmacen=usua.getPasosParcial();
+                                          long totalAmacen=usua.getPasosTotales();
+                                          long pasosTotalesAAlmacenar=0;
+                                          long pasosParcialesAAlmacenar=0;
+                                          if(pasosGenerados<=parcialAmacen){
+                                              pasosParcialesAAlmacenar=pasosGenerados;
+                                              pasosTotalesAAlmacenar=totalAmacen+pasosGenerados;
+                                          }else{
+                                              pasosParcialesAAlmacenar=pasosGenerados;
+                                              pasosTotalesAAlmacenar=totalAmacen+(pasosGenerados-parcialAmacen);
+                                          }
+                                            guardaPasos(pasosParcialesAAlmacenar,pasosTotalesAAlmacenar);
+                                        } else {
+                                            Log.d(TAG, "get failed with ", task.getException());
+                                        }
+                                    }
+                                });
+
+
+
+                                textoMostrar.setText(String.valueOf(pasosGenerados));
+                                textoMostrarTotal.setText(String.valueOf(pasosGenerados));
                             }
                         })
                 .addOnFailureListener(
@@ -264,28 +275,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    public void guardaPasos(long totalPasos) {
+    public void guardaPasos( long parcialPasos,long totalPasos) {
 
-        DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
+        //Crear una variable parcial, que cuando acabe el dia y se ponga a cero el kontador de pasos compruebe los pasos
+        //que meto son menos que el parcial anterior? SI: sumo el ultimo parcial almacenado al parcial que voy a almacenar gemerado ese dia
+
+
+        /*DocumentReference docRef = baseDatos.collection("usuarios").document(mAuth.getUid());
         docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
             @Override
             public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                 if (task.isSuccessful()) {
                     DocumentSnapshot document = task.getResult();
                     Usuario usuario = document.toObject(Usuario.class);
-                    Date fechaUltimaGuardada = usuario.getFecha();
-                    //TODO comparar fechas
+                    Date fechaUltimaGuardadaMal = usuario.getFecha();
+                    Date hoyMal = Calendar.getInstance().getTime();
+                    SimpleDateFormat dt1 = new SimpleDateFormat("yyyy-MM-dd");
+                    Date hoyBien=null;
+                    Date fechaUltimaGuardadaBien=null;
+                    try {
+                        hoyBien = dt1.parse(hoyMal.toString());
+                        fechaUltimaGuardadaBien =dt1.parse(fechaUltimaGuardadaMal.toString());
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
 
+                   int resultado= fechaUltimaGuardadaBien.compareTo(hoyBien);
+                    Date hoy2 = Calendar.getInstance().getTime();
                 } else {
                     Log.d(TAG, "get failed with ", task.getException());
                 }
             }
-        });
+        });*/
+
 
         Date hoy2 = Calendar.getInstance().getTime();
         Map<String, Object> user = new HashMap<>();
         user.put("fecha", hoy2);
         user.put("pasosTotales", totalPasos);
+        user.put("pasosParcial", parcialPasos);
         user.put("id", mAuth.getUid());
         // Add a new document with a generated ID
         baseDatos.collection("usuarios").document(mAuth.getUid())
