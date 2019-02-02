@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView textoRanking;
     private TextView textoMostrarTotal;
     public static boolean guardarPasos = false;
-    private String [] usuariosLista= new String[]{"asdfasdf","dfghdfghdfgh","wertwert","adsvasdv","jtkuykkutyuk","asdfsdf","jtkuykkutyuk","asdfsdf"};
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -322,6 +322,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return true;
         }else{
             //TODO:Lista ranking
+
+
+            baseDatos.collection("usuarios").orderBy("pasosTotales", Query.Direction.DESCENDING)
+                    .get()
+                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                            int numeroTotalusuarios = 0;
+                            if (task.isSuccessful()) {
+                                numeroTotalusuarios = task.getResult().size();
+                                int reg=0;
+                                List<Usuario> usuarios = new ArrayList<>();
+                                String[] clasificaciones= new String[numeroTotalusuarios];
+                                //Recorre todos los documentos de la firestore y los convierte en Usuarios, que se guardan en una List
+                                for (QueryDocumentSnapshot document : task.getResult()) {
+                                    Usuario usuario = document.toObject(Usuario.class);
+                                    usuarios.add(usuario);
+                                    clasificaciones[reg]=usuario.getId()+"                                          Pasos de Hoy: "+usuario.getPasosParcial()+"   Pasos Totales: "+usuario.getPasosTotales();
+                                            reg++;
+                                }
+                                Intent clasificacion = new Intent(getApplicationContext(), ListaActivity.class);
+                                ListaActivity.setResultados(clasificaciones);
+                                startActivity(clasificacion);
+                            } else {
+                                Log.d(TAG, "Error getting documents: ", task.getException());
+                            }
+                        }
+
+
+                    });
+
+
         }
 
         return super.onOptionsItemSelected(item);

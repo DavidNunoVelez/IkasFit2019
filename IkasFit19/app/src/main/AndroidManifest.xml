@@ -16,6 +16,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name="org.morfe.ikasfit19.ListaActivity"
+            android:label="Clasificación "
+            android:screenOrientation="portrait">
+        </activity>
     </application>
 
 </manifest>

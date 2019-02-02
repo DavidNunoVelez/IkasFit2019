@@ -3,18 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="org.morfe.ikasfit19.MainActivity" >
-
-    <item
-        android:id="@+id/action_read_data"
-        android:orderInCategory="100"
-        android:textColor="@android:color/holo_blue_bright"
-        android:title="Guardar Pasos"
-        app:showAsAction="never|always"
-        tools:textColor="@android:color/holo_blue_bright" />
     <item
         android:id="@+id/action_read_ranking"
         android:orderInCategory="100"
         android:textColor="@android:color/holo_blue_bright"
-        android:title="Ver Clasificación"
+        android:title="Atrás"
         app:showAsAction="never|always" />
 </menu>
